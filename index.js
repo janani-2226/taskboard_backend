@@ -31,6 +31,18 @@ app.post("/create", async (req, res) => {
     }
 })
 
+app.get("/home", async (req, res) => {
+  try {
+    const connection = await MongoClient.connect(url);
+    const db = connection.db("task");
+    const array = await db.collection("todo").find().toArray();
+    await connection.close();
+    res.json(array);
+  } catch (error) {
+    res.status(500).json({ message: "Something Went Wrong" });
+  }
+});
+
 app.get("/home/:id", async (req, res) => {
     try {
         const connection = await MongoClient.connect(url);
@@ -46,19 +58,25 @@ app.get("/home/:id", async (req, res) => {
 })
 
 app.put("/home/:id", async (req, res) => {
-    try {
-        const connection = await MongoClient.connect(url);
-        const db = connection.db("task");
-        const objId = new ObjectId(req.params.id);
-        console.log(objId)
-        await db.collection("todo").findOneAndUpdate({_id: objId},{$set: req.body});
-        await connection.close();
-        res.json({ message: "Task updated"});
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({meaage: "Something went wrong"})
-    }
-})
+  try {
+      const connection = await MongoClient.connect(url);
+      const db = connection.db("task");
+      const objId = new ObjectId(req.params.id);
+      const updateData = { ...req.body };
+      delete updateData._id; // Remove _id field to prevent modification
+
+      await db.collection("todo").findOneAndUpdate(
+          { _id: objId },
+          { $set: updateData }
+      );
+      await connection.close();
+      res.json({ message: "Task updated" });
+  } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Something went wrong" });
+  }
+});
+
 
 app.delete("/home/:id" , async(req,res)=>{
     try {
@@ -81,7 +99,7 @@ app.post("/login", async (req, res) => {
       const loginuser = await db
         .collection("user")
         .findOne({ email: req.body.email });
-      // console.log(loginuser);
+      console.log(loginuser);
       if (loginuser) {
         const password = bcrypt.compareSync(
           req.body.password,
